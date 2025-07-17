@@ -237,3 +237,5 @@ df[,c("iso3","year","gghed_usd","GNI","gghed_GNI","growth_rate_gghed_GNI","lag_g
 
 # clean
 rm(gdp_long,gdp_combined,gdp_raw,gdp_total_long,gdp_total_raw,ghed_raw,gibd_raw,gni_long,gni_raw,vac_measles_raw,year_range,imf_gdp,imf_gdp_raw,gni_total_long,gni_total_raw)
+
+save.image(file = "input_data/cleaned_data.RData") 

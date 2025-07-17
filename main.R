@@ -8,7 +8,11 @@ rm(list = ls())
 setwd("C:/Users/three/Neu Kasten_5440/027 Gavi/unicef_gibd/")
 getwd()
 
-source("utils/data_cleaning.R")
+#source("utils/data_cleaning.R")
+
+
+load("input_data/cleaned_data.RData")
+
 
 ###############
 # ANLAYSIS ####
@@ -95,8 +99,38 @@ model_4 <- lm(
   ,data = df)
 
 summary(model_4)
+#######################
+# INLA Bayesian methods ####
+df <- df %>% rename(income_group = `Income group`)
+df <- df %>%   mutate(year = as.numeric(as.character(year)))
+df <- df[order(df$iso3, df$year), ]  
+df$year_index <- df$year  
 
-# Bayesian methods ####
+library(INLA)
+
+formula <- 
+  growth_rate_budget_L1 ~
+  avg3_growth_rate_GDP + 
+  avg3_growth_rate_gghed_GDP +
+  income_group +
+  f(iso3, 
+    model = "iid", 
+    hyper = list(prec= list(prior = "pc.prec",
+                            param = c(1, 0.01))))+
+  f(year, model = "rw1", hyper = list(prec = list(prior = "pc.prec", param = c(1, 0.01))))
+
+
+model_inla_1 <- inla(
+  formula,
+  data = df,
+  family = "gaussian",
+  control.predictor = list(compute = TRUE),
+  control.compute = list(dic = TRUE, waic = TRUE)
+)
+
+summary(model_inla_1)
+
+
 
 
 
