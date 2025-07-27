@@ -5,7 +5,7 @@ An exploratory analysis on UNICEF Global Immunization Budget Database
 - Author: Hao-Kai Tseng
 
 ## Rationale:
-This project aims to analyse the links from GIBD general immunisation budget changes (not) to WUENIC immunisation coverages for 5 antigens (MCV, DTP, BCG, PCV, polio). LMICs in 2021-2024 are fitted to predict the coverage for 2025.
+This project aims to analyse the links from GIBD general immunisation budget changes to WUENIC immunisation coverages changes for 5 antigens (MCV, DTP, BCG, PCV, polio). LMICs in 2021-2024 are fitted to predict the coverage for 2025.
 
 ## Method: 
 Bayesian temporal models are fitted using the Integrated Nested Laplace Approximation (INLA) framework, assuming a Gaussian distribution and a random walk of order 1 for the year as a random effect. Penalized complexity (PC) priors are implemented to control model complexity.
