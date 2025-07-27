@@ -1,21 +1,30 @@
 
-# READ
-gibd_raw <- read.csv("20250705_UNICEF_GIBD_data.csv")|>arrange(iso3)
+# READ DATA
+gibd_raw <- read.csv("input_data/20250705_UNICEF_GIBD_data.csv")|>arrange(iso3)
 gni_raw <- read.csv("input_data/API_NY.GNP.PCAP.CD_DS2_en_csv_v2_38331.csv", skip =4)
 gni_total_raw <- read.csv("input_data/API_NY.GNP.ATLS.CD_DS2_en_csv_v2_29111.csv", skip =4)
 gdp_total_raw <- read.csv("input_data/API_NY.GDP.MKTP.CD_DS2_en_csv_v2_38344.csv", skip =4) # all
 gdp_raw <- read.csv("input_data/API_NY.GDP.PCAP.CD_DS2_en_csv_v2_38293.csv", skip =4) #per capita
 income_group <- readxl::read_excel("input_data/CLASS_2025_07_02.xlsx")|>select(-Economy, -'Lending category')
-vac_measles_raw <- readxl::read_excel("input_data/Measles vaccination coverage 2025-03-07 08-50 UTC.xlsx")
-case_measles_raw <- readxl::read_excel("input_data/Measles reported cases and incidence 2025-03-07 09-07 UTC.xlsx")
-vac_dtp_raw <- readxl::read_excel("input_data/Diphtheria tetanus toxoid and pertussis (DTP) vaccination coverage 2025-03-07 09-10 UTC.xlsx")
+# case_measles_raw <- readxl::read_excel("input_data/Measles reported cases and incidence 2025-03-07 09-07 UTC.xlsx")
+vac_measles1_raw <- readxl::read_excel("input_data/Measles vaccination coverage 2025-15-07 09-29 UTC mcv1.xlsx")
+vac_measles2_raw <- readxl::read_excel("input_data/Measles vaccination coverage 2025-15-07 09-29 UTC mcv2.xlsx")
+vac_pcv_raw <- readxl::read_excel("input_data/Pneumococcal vaccination coverage 2025-24-07 08-06 UTC.xlsx")
+vac_dtp_raw <- readxl::read_excel("input_data/Diphtheria tetanus toxoid and pertussis (DTP) vaccination coverage 2025-15-07 09-31 UTC dtp1.xlsx")
+vac_dtp3_raw <- readxl::read_excel("input_data/Diphtheria tetanus toxoid and pertussis (DTP) vaccination coverage 2025-15-07 09-31 UTC dtp3.xlsx")
+vac_bcg_raw <- readxl::read_excel("input_data/Bacillus Calmette–Guérin (BCG) vaccination coverage 2025-15-07 09-54 UTC.xlsx")
+vac_ipv1_raw <- readxl::read_excel("input_data/Poliomyelitis vaccination coverage 2025-15-07 09-31 UTC ipv1.xlsx")
+vac_ipv2_raw <- readxl::read_excel("input_data/Poliomyelitis vaccination coverage 2025-24-07 07-52 UTC ipv2.xlsx")
+vac_polio3_raw <- readxl::read_excel("input_data/Poliomyelitis vaccination coverage 2025-15-07 09-31 UTC polio3.xlsx")
 ghed_raw <- readxl::read_excel("input_data/GHED_data.xlsx")
 imf_gdp_raw <- readxl::read_excel("input_data/imf-dm-export-20250714.xls", skip = 0)
 
 # CLEAN DATA ####
 # only us dollar and L1 level
 # expand so that every country has rows for all years from 2018 to 2025, and fill in NA for missing year_range <- 2018:2025
+
 year_range <- 2015:2026
+
 gibd <- gibd_raw %>%
   mutate(
     budget_us = str_remove_all(budget_us, "[$,]") %>% as.numeric(),
@@ -106,41 +115,39 @@ gdp_combined <- full_join(
   ) %>%
   arrange(iso3, year)%>%rename(GDP=GDP_combined)
 
+func_clean_vaccine <- function(df) {
+  df %>%
+    filter(COVERAGE_CATEGORY == "WUENIC") %>%
+    mutate(YEAR = as.integer(YEAR)) %>%
+    select(CODE, YEAR, ANTIGEN, COVERAGE) %>%
+    pivot_wider(
+      names_from = ANTIGEN,
+      values_from = COVERAGE,
+      names_prefix = "coverage_")%>%
+    mutate(across(starts_with("coverage_"), ~ .x / 100))
+}
 
-vac_measles_flat <- vac_measles_raw %>%
-  filter(COVERAGE_CATEGORY == "WUENIC") %>%   
-  mutate(YEAR = as.integer(YEAR)) %>%
-  select(CODE, YEAR, ANTIGEN, COVERAGE) %>%   
-  pivot_wider(
-    names_from = ANTIGEN,
-    values_from = COVERAGE,
-    names_prefix = "coverage_"
-  )
-
-vac_dtp_flat <- vac_dtp_raw %>%
-  filter(COVERAGE_CATEGORY == "WUENIC") %>%   
-  mutate(YEAR = as.integer(YEAR)) %>%
-  select(CODE, YEAR, ANTIGEN, COVERAGE) %>%   
-  pivot_wider(
-    names_from = ANTIGEN,
-    values_from = COVERAGE,
-    names_prefix = "coverage_"
-  )
-
+vac_measles1_flat <- func_clean_vaccine(vac_measles1_raw)
+vac_measles2_flat <- func_clean_vaccine(vac_measles2_raw)
+vac_dtp_flat     <- func_clean_vaccine(vac_dtp_raw)
+vac_dtp3_flat    <- func_clean_vaccine(vac_dtp3_raw)
+vac_bcg_flat     <- func_clean_vaccine(vac_bcg_raw)
+vac_ipv1_flat    <- func_clean_vaccine(vac_ipv1_raw)
+vac_ipv2_flat    <- func_clean_vaccine(vac_ipv2_raw)
+vac_polio3_flat  <- func_clean_vaccine(vac_polio3_raw)
+vac_pcv_flat  <- func_clean_vaccine(vac_pcv_raw)
 
 ghed_raw <- ghed_raw %>% 
   select(code, year, gghed_usd)%>%
   mutate(year = as.integer(year))
 
-
-
-
-
+########################
 # MERGE MASTER DATA ####
 # country-year as one raw
 #only filter low and lower middle income groups
 df_all <- gibd %>%
     left_join(income_group, by = c("iso3" = "Code"))|>
+    rename(income_group = `Income group`)|>
     left_join(gni_long, by=c("iso3" = "Country.Code", 
                              "year" = "Year"))|>
     left_join(gdp_long, by=c("iso3" = "Country.Code", 
@@ -149,93 +156,67 @@ df_all <- gibd %>%
                              "year" = "Year"))|>
     left_join(gdp_combined, by=c("iso3" = "iso3", 
                              "year" = "year"))|>
-    left_join(vac_measles_flat, by=c("iso3"="CODE",
+    left_join(vac_measles1_flat, by=c("iso3"="CODE",
+                              "year"="YEAR"))|>
+    left_join(vac_measles2_flat, by=c("iso3"="CODE",
+                              "year"="YEAR"))|>
+    left_join(vac_pcv_flat, by=c("iso3"="CODE",
                               "year"="YEAR"))|>
     left_join(vac_dtp_flat, by=c("iso3"="CODE",
                               "year"="YEAR"))|>
+    left_join(vac_dtp3_flat, by=c("iso3"="CODE",
+                              "year"="YEAR"))|>
+    left_join(vac_bcg_flat, by=c("iso3"="CODE",
+                              "year"="YEAR"))|>
+    left_join(vac_ipv1_flat, by=c("iso3"="CODE",
+                              "year"="YEAR"))|>
+    left_join(vac_ipv2_flat, by=c("iso3"="CODE",
+                              "year"="YEAR"))|>
+    left_join(vac_polio3_flat, by=c("iso3"="CODE",
+                              "year"="YEAR"))|>
     left_join(ghed_raw, by=c("iso3"="code",
                               "year"="year"))|> 
-    filter(`Income group` %in% c("Low income","Lower middle income"))|>
+#    filter(`Income group` %in% c("Low income","Lower middle income"))|>
     mutate(gghed_GDP = gghed_usd *1000000 /GDP)|>
     mutate(gghed_GNI = gghed_usd *1000000 /GNI)
 
 # compute growth rate
-df_all <- df_all %>%
-  arrange(iso3, year) %>%
-  group_by(iso3) %>%
-  mutate(
-    growth_rate_budget_L1  = (budget_L1  - lag(budget_L1))  / lag(budget_L1),
-    growth_rate_GNI        = (GNI        - lag(GNI))        / lag(GNI),
-    growth_rate_GDP        = (GDP        - lag(GDP))        / lag(GDP),
-    growth_rate_GNIpc      = (GNIpc      - lag(GNIpc))      / lag(GNIpc),
-    growth_rate_GDPpc      = (GDPpc      - lag(GDPpc))      / lag(GDPpc),
-    growth_rate_gghed_usd  = (gghed_usd  - lag(gghed_usd))  / lag(gghed_usd),
-    growth_rate_gghed_GDP  = (gghed_GDP  - lag(gghed_GDP))  / lag(gghed_GDP),
-    growth_rate_gghed_GNI  = (gghed_GNI  - lag(gghed_GNI))  / lag(gghed_GNI)
-  ) %>%
-  ungroup()
+growth_rate <- function(x) {(x - lag(x)) / lag(x)}
 
+growth_vars <- c(
+  "budget_L1", "budget_L1_vaccine", "budget_L1_immunisation", "budget_L1_programme",
+  "GNI", "GDP", "GNIpc", "GDPpc", "gghed_usd", "gghed_GDP", "gghed_GNI",
+  "coverage_MCV1","coverage_MCV2", "coverage_DTPCV1", "coverage_DTPCV3",
+  "coverage_BCG", "coverage_IPV1","coverage_IPV2", "coverage_POL3","coverage_PCV3"
+)
 
 df_all <- df_all %>%
   arrange(iso3, year) %>%
   group_by(iso3) %>%
-  mutate(
-    lag_growth_rate_GNI = lag(growth_rate_GNI),
-    lag_growth_rate_GDP = lag(growth_rate_GDP),
-    lag_growth_rate_GNIpc = lag(growth_rate_GNIpc),
-    lag_growth_rate_GDPpc = lag(growth_rate_GDPpc),
-    lag_growth_rate_gghed_usd = lag(growth_rate_gghed_usd),
-    lag_growth_rate_gghed_GDP = lag(growth_rate_gghed_GDP),
-    lag_growth_rate_gghed_GNI = lag(growth_rate_gghed_GNI),
-  ) %>%
-  ungroup()
+  mutate(across(
+    all_of(growth_vars),
+    ~ growth_rate(.),
+    .names = "growth_rate_{.col}"
+  ))%>%
+  ungroup()%>%
+   mutate(across(where(is.numeric), ~ ifelse(is.nan(.) | is.infinite(.), NA, .)))# L1 NaN as NA
 
-# 2-3 years average gorwth rates ####
+
+ 
+# pooled average for vaccine coverages ####
 df_all <- df_all %>%
-  arrange(iso3, year) %>%
-  group_by(iso3) %>%
-  mutate(
-    # 2-year average growth rates
-    avg2_growth_rate_GNI        = rowMeans(cbind(lag(growth_rate_GNI, 1), lag(growth_rate_GNI, 2)), na.rm = TRUE),
-    avg2_growth_rate_GDP        = rowMeans(cbind(lag(growth_rate_GDP, 1), lag(growth_rate_GDP, 2)), na.rm = TRUE),
-    avg2_growth_rate_GNIpc      = rowMeans(cbind(lag(growth_rate_GNIpc, 1), lag(growth_rate_GNIpc, 2)), na.rm = TRUE),
-    avg2_growth_rate_GDPpc      = rowMeans(cbind(lag(growth_rate_GDPpc, 1), lag(growth_rate_GDPpc, 2)), na.rm = TRUE),
-    avg2_growth_rate_gghed_usd  = rowMeans(cbind(lag(growth_rate_gghed_usd, 1), lag(growth_rate_gghed_usd, 2)), na.rm = TRUE),
-    avg2_growth_rate_gghed_GDP  = rowMeans(cbind(lag(growth_rate_gghed_GDP, 1), lag(growth_rate_gghed_GDP, 2)), na.rm = TRUE),
-    avg2_growth_rate_gghed_GNI  = rowMeans(cbind(lag(growth_rate_gghed_GNI, 1), lag(growth_rate_gghed_GNI, 2)), na.rm = TRUE),
+  mutate(coverage_pooled = rowMeans(select(., starts_with("coverage_")), na.rm = TRUE)) %>%
+  mutate(growth_rate_coverage_pooled = rowMeans(select(., starts_with("growth_rate_coverage_")), na.rm = TRUE)) 
 
-    # 3-year average growth rates
-    avg3_growth_rate_GNI        = rowMeans(cbind(lag(growth_rate_GNI, 1), lag(growth_rate_GNI, 2), lag(growth_rate_GNI, 3)), na.rm = TRUE),
-    avg3_growth_rate_GDP        = rowMeans(cbind(lag(growth_rate_GDP, 1), lag(growth_rate_GDP, 2), lag(growth_rate_GDP, 3)), na.rm = TRUE),
-    avg3_growth_rate_GNIpc      = rowMeans(cbind(lag(growth_rate_GNIpc, 1), lag(growth_rate_GNIpc, 2), lag(growth_rate_GNIpc, 3)), na.rm = TRUE),
-    avg3_growth_rate_GDPpc      = rowMeans(cbind(lag(growth_rate_GDPpc, 1), lag(growth_rate_GDPpc, 2), lag(growth_rate_GDPpc, 3)), na.rm = TRUE),
-    avg3_growth_rate_gghed_usd  = rowMeans(cbind(lag(growth_rate_gghed_usd, 1), lag(growth_rate_gghed_usd, 2), lag(growth_rate_gghed_usd, 3)), na.rm = TRUE),
-    avg3_growth_rate_gghed_GDP  = rowMeans(cbind(lag(growth_rate_gghed_GDP, 1), lag(growth_rate_gghed_GDP, 2), lag(growth_rate_gghed_GDP, 3)), na.rm = TRUE),
-    avg3_growth_rate_gghed_GNI  = rowMeans(cbind(lag(growth_rate_gghed_GNI, 1), lag(growth_rate_gghed_GNI, 2), lag(growth_rate_gghed_GNI, 3)), na.rm = TRUE)
-  ) %>%
-  ungroup()
+df_all[,c("coverage_pooled","coverage_MCV1","coverage_MCV2","coverage_DTPCV1","coverage_DTPCV3","coverage_PCV3","coverage_BCG" ,"coverage_IPV1","coverage_IPV2","coverage_POL3")]
+df_all[,c("growth_rate_coverage_pooled","growth_rate_coverage_MCV1","growth_rate_coverage_DTPCV1","growth_rate_coverage_BCG" ,"growth_rate_coverage_IPV1")]
 
 
-glimpse(df_all)
-
-table(df_all$country_name,df_all$year)
-
-# drop missing countries, obs >=0
-# (country_obs <- df_all %>%
-#   group_by(country_name) %>%
-#   summarise(n_years = n()))
-# selected_countries <- country_obs %>%
-#   filter(n_years >= 0) %>%
-#   pull(country_name)
-# df <- df_all %>%
-#   filter(country_name %in% selected_countries)
-
-df <- df_all
-
-df[,c("iso3","year","gghed_usd","GNI","gghed_GNI","growth_rate_gghed_GNI","lag_growth_rate_gghed_GNI","avg2_growth_rate_gghed_GNI","avg3_growth_rate_gghed_GNI")]
-
+#df_all[,c("iso3","year","gghed_usd","GNI","gghed_GNI","growth_rate_gghed_GNI","lag_growth_rate_gghed_GNI","avg2_growth_rate_gghed_GNI","avg3_growth_rate_gghed_GNI")]
 
 # clean
-rm(gdp_long,gdp_combined,gdp_raw,gdp_total_long,gdp_total_raw,ghed_raw,gibd_raw,gni_long,gni_raw,vac_measles_raw,year_range,imf_gdp,imf_gdp_raw,gni_total_long,gni_total_raw)
+rm(list = ls(pattern = "raw"))
+rm(gdp_long,gdp_combined,gdp_total_long,gni_long,year_range,imf_gdp,gni_total_long)
 
 save.image(file = "input_data/cleaned_data.RData") 
+
