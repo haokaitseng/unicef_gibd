@@ -181,30 +181,4 @@ mean(table_predict$coverage_DTPCV1_2025_predicted_975quant)
 
 
 
-osterior_samples <- inla.posterior.sample(10, prediction)
-# #######################
-# # 1. delta coverage dtp1L1 <- delta budget L1
-# df_temp <- df %>%
-#   filter(!is.na(growth_rate_budget_L1),
-#          !is.na(growth_rate_coverage_DTPCV3))
-
-# formula <- 
-#   growth_rate_coverage_DTPCV3 ~ 
-#   growth_rate_budget_L1 +
-#   f(year_index, 
-#     model = "ar1", 
-#     hyper = list(prec = list(prior = "pc.prec", param = c(1, 0.05))))#better than alpha 0.1 or 0.01
-
-# inla_dtp1L1 <- inla(
-#   formula,
-#   data = df_temp,
-#   family = "gaussian",
-#   control.predictor = list(compute = TRUE),
-#   control.compute = list(dic = TRUE, waic = TRUE))
-
-# summary(inla_dtp1L1)
-
-# (fixed_summary <- inla_dtp1L1$summary.fixed)# Print with more digits
-
-# hist(df$growth_rate_coverage_DTPCV1, breaks = 30, main = "Histogram of Vaccine Coverage Growth Rate")
-# qqnorm(df$growth_rate_coverage_DTPCV1); qqline(df$growth_rate_coverage_DTPCV1)
+# posterior_samples <- inla.posterior.sample(10, prediction)
