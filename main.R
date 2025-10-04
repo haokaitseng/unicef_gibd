@@ -6,12 +6,18 @@ library(dplyr)
 library(tidyverse)
 library(ggplot2)
 library(corrplot)
+library(dplyr)
+library(purrr)
 library(ggpubr)
+library(stringr)
+
 
 setwd("C:/Users/three/Neu Kasten_5440/027 Gavi/unicef_gibd/")
 getwd()
 
 #source("utils/data_cleaning.R")
+source("utils/visualisation.R")
+
 
 load("input_data/cleaned_data.RData") # output is called df_all
 #################################
@@ -98,6 +104,34 @@ for (i in response_vars) {
 }
 
 print(model_results)
+
+# 3-2. fixed effect visualisation ####
+table_fixed_effect <- map_df(names(model_results), function(mn) {
+  fx <- as.data.frame(model_results[[mn]]$fixed)
+  fx$term  <- rownames(model_results[[mn]]$fixed)
+  fx$model <- mn
+  fx
+}) %>%
+  filter(term == "growth_rate_budget_L1") %>%
+  rename(
+    q025 = `0.025quant`,
+    q975 = `0.975quant`,
+    q50  = `0.5quant`
+  ) %>%
+  mutate(model_short = str_remove(model, "^growth_rate_coverage_")) %>%
+  filter(model_short != "pooled") %>%
+  arrange(model_short)
+
+plot_fixed_effect_combined <- table_fixed_effect %>%
+  split(.$model_short) %>%
+  map(make_fixed_effect_panel)
+
+plot_fixed_effect_combined <-ggarrange(plotlist = plot_fixed_effect_combined,
+          ncol = 3, nrow = 3, align = "hv")
+print(plot_fixed_effect_combined)
+
+ggsave(  filename = "output/graph/grid_fixed_effect_95CrL.png",  plot = plot_fixed_effect_combined,
+  width = 12, height = 10, units = "in", dpi = 300 )
 
 #########################
 # 4. predicting 2025 ####

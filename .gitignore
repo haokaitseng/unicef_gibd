@@ -1,4 +1,6 @@
 input_data/
+dissemination/
+output/
 API_NY.GDP.MKTP.CD_DS2_en_csv_v2_38344.csv
 input_data/API_NY.GDP.PCAP.CD_DS2_en_csv_v2_38293.csv
 input_data/API_NY.GNP.PCAP.CD_DS2_en_csv_v2_38331.csv
