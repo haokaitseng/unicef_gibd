@@ -10,6 +10,8 @@ library(dplyr)
 library(purrr)
 library(ggpubr)
 library(stringr)
+library(grid)  
+library(rlang)
 
 
 setwd("C:/Users/three/Neu Kasten_5440/027 Gavi/unicef_gibd/")
@@ -74,7 +76,7 @@ df %>%
 response_vars <- c("growth_rate_coverage_DTPCV1", "growth_rate_coverage_DTPCV3", 
 "growth_rate_coverage_MCV1","growth_rate_coverage_MCV2","growth_rate_coverage_POL3",
 "growth_rate_coverage_IPV1","growth_rate_coverage_IPV2","growth_rate_coverage_BCG",
-"growth_rate_coverage_PCV3","growth_rate_coverage_pooled")
+"growth_rate_coverage_PCV3")#,"growth_rate_coverage_pooled"
 
 model_results <- list()
 
@@ -119,10 +121,10 @@ table_fixed_effect <- map_df(names(model_results), function(mn) {
     q50  = `0.5quant`
   ) %>%
   mutate(model_short = str_remove(model, "^growth_rate_coverage_")) %>%
-  filter(model_short != "pooled") %>%
-  arrange(model_short)
+  filter(model_short != "pooled") 
 
 plot_fixed_effect_combined <- table_fixed_effect %>%
+  mutate(model_short = factor(model_short, levels = unique(model_short)))%>% # preserve order
   split(.$model_short) %>%
   map(make_fixed_effect_panel)
 
@@ -216,3 +218,23 @@ mean(table_predict$coverage_DTPCV1_2025_predicted_975quant)
 
 
 # posterior_samples <- inla.posterior.sample(10, prediction)
+
+
+#######################
+# 5. EDA & visuals #### 
+#######################
+
+# (5-1.) line scatter plot for growth rates ####
+list_arrow_growth_rate <- lapply(response_vars, function(rv) {
+  arrow_plot(
+    df,
+    y_var = rv,
+    color_var = "income_group", title = NULL)
+})
+
+plot_arrow_growth_rate <- ggarrange(plotlist = list_arrow_growth_rate, ncol = 3, nrow = 3, align = "hv",
+                        common.legend = TRUE, legend = "bottom")
+print(plot_arrow_growth_rate)
+
+ggsave("output/graph/arrow_plots_growth_rates.png", plot_arrow_growth_rate, width = 14, height = 12, dpi = 300)
+
