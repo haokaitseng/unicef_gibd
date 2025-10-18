@@ -1,5 +1,5 @@
 
-# Fixed effect
+# Fixed effect ####
 
 make_fixed_effect_panel <- function(df_one) {
   stopifnot(nrow(df_one) == 1)
@@ -83,4 +83,95 @@ arrow_plot <- function(df,
   }
 
   return(p)
+}
+
+# prediction budget and coverage dual axis plot ####
+func_prediction_country_panel <- function(dat) {
+  stopifnot(length(unique(dat$iso3)) == 1)
+
+  # country-specific scale so coverage (0–1) maps to left axis
+  sf <- max(dat$budget_L1, na.rm = TRUE)
+  if (!is.finite(sf) || sf <= 0) sf <- 1  # safety fallback
+
+  # labels: 2025 -> "90 (88–92)", other years -> "90"
+  dat_lab <- dat %>%
+    dplyr::mutate(
+      cov_pct  = round(coverage_mean * 100, 2),
+      low_pct  = round(coverage_low  * 100),
+      high_pct = round(coverage_high * 100),
+      cov_lab  = ifelse(
+        year == 2025 & !is.na(low_pct) & !is.na(high_pct),
+        paste0(cov_pct, " (", low_pct, "–", high_pct, ")"),
+        as.character(cov_pct)
+      )
+    )
+
+  # 95% CrI shadow only for 2025 (works even with a single x)
+  cri_2025 <- dat %>%
+    dplyr::filter(year == 2025, !is.na(coverage_low), !is.na(coverage_high)) %>%
+    dplyr::transmute(
+      xmin = year - 0.35,
+      xmax = year + 0.35,
+      ymin = coverage_low  * sf,
+      ymax = coverage_high * sf,
+      year = year,
+      Legend_Key = "Coverage (95% CrI)"
+    )
+
+  # headroom for labels
+  y_top <- max(c(dat$budget_L1,
+                 dat$coverage_mean * sf,
+                 dat$coverage_high * sf), na.rm = TRUE)
+  if (!is.finite(y_top)) y_top <- max(dat$budget_L1, na.rm = TRUE)
+  y_pad <- 0.12 * y_top
+
+  ggplot(dat, aes(x = year)) +
+
+    # geom_linerange(
+    #   data = cri_2025,
+    #   aes(x = year, ymin = ymin, ymax = ymax),
+    #   inherit.aes = FALSE,
+    #   color = "red",
+    #   linewidth = 0.8
+    # ) +
+    # Budget bars
+    geom_col(aes(y = budget_L1), fill = "grey85") +
+    # Coverage line & points (scaled to left axis)
+    geom_line(aes(y = coverage_mean * sf), color = "blue3", linewidth = 1) +
+    geom_point(aes(y = coverage_mean * sf), color = "blue3", size = 2.2) +
+    # 95% CrI shadow for 2025
+    geom_rect(
+      data = cri_2025,
+      aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = Legend_Key),
+      inherit.aes = FALSE,
+      fill = "red", alpha = 0.15
+    ) +
+    # Coverage labels (2025 shows 95% CrI)
+    geom_text(
+      data = dat_lab,
+      aes(y = coverage_mean * sf, label = cov_lab),
+      color = "blue3", size = 5, vjust = -0.6
+    ) +
+    # Axes (ggplot ≥3.5 uses `transform`)
+    scale_y_continuous(
+      name = "Immunisation budget (US$M)",
+      labels = scales::label_number(scale = 1e-6),
+      sec.axis = sec_axis(
+        transform = ~ . / sf,
+        name      = "DTPCV1 Coverage (%)",
+        labels    = scales::label_percent(accuracy = 1)
+      )
+    ) +
+    scale_x_continuous(breaks = sort(unique(dat$year))) +
+    scale_fill_manual(values = c("Coverage (95% CrI)" = "red"))+
+    coord_cartesian(ylim = c(0, y_top + y_pad)) +
+    labs(title = paste0(unique(dat$country_name))) +
+    theme_minimal(base_size = 12) +
+    theme(
+      panel.grid.minor = element_blank(),
+      panel.grid.major.x = element_blank(),
+      axis.title.y.right = element_text(color = "blue3"),
+      axis.text.y.right  = element_text(color = "blue3"),
+      plot.title = element_text(size = 22, face = "bold")
+    )
 }

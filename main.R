@@ -12,7 +12,7 @@ library(ggpubr)
 library(stringr)
 library(grid)  
 library(rlang)
-
+library(scales)
 
 setwd("C:/Users/three/Neu Kasten_5440/027 Gavi/unicef_gibd/")
 getwd()
@@ -194,8 +194,8 @@ coverage_DTPCV1_2025_predicted_975quant  <- df_2024$coverage_DTPCV1 *
 coverage_DTPCV1_2025_predicted_975quant <- pmin(1, coverage_DTPCV1_2025_predicted_975quant)# clip the upper bound to 100% maximum
 
 table_predict = data.frame(
-  df_2024$iso3,
-  df_2024$country_name,
+  iso3 = df_2024$iso3,
+  country_name = df_2024$country_name,
   coverage_DTPCV1_2024 = df_2024$coverage_DTPCV1,
   budget_2024 = df_2024$budget_L1,
   growth_rate_budget_2024 = df_2024$growth_rate_budget_L1,
@@ -215,9 +215,35 @@ mean(table_predict$coverage_DTPCV1_2025_predicted_mean)
 mean(table_predict$coverage_DTPCV1_2025_predicted_025quant)
 mean(table_predict$coverage_DTPCV1_2025_predicted_975quant)
 
-
-
 # posterior_samples <- inla.posterior.sample(10, prediction)
+
+# 4-2. prediction visualisation ####
+temp1 <- df %>%
+  filter(iso3 %in% list_predicted_iso3) %>%
+  select(iso3, country_name, year, budget_L1, coverage_DTPCV1) %>%
+  mutate(coverage_mean = coverage_DTPCV1,
+         coverage_low  = NA_real_,
+         coverage_high = NA_real_) %>%
+  select(-coverage_DTPCV1)
+
+temp2 <- table_predict %>%
+  transmute(iso3, country_name, year = 2025L,
+    budget_L1 = budget_2025,
+    coverage_mean = coverage_DTPCV1_2025_predicted_mean,
+    coverage_low  = coverage_DTPCV1_2025_predicted_025quant,
+    coverage_high = coverage_DTPCV1_2025_predicted_975quant)
+
+table_temp_2021_2025 <- bind_rows(temp1, temp2) %>%
+  arrange(iso3, year)
+
+predict_plot_list <- table_temp_2021_2025 %>% split(.$iso3) %>% 
+  map(func_prediction_country_panel)
+
+plot_prediction_2021_2025 <- ggarrange(plotlist = predict_plot_list, ncol = 2, 
+                                       nrow = ceiling(length(predict_plot_list)/2))
+print(plot_prediction_2021_2025)
+
+ggsave("output/graph/plot_prediction_2021_2025.png", plot_prediction_2021_2025, width = 12, height = 10, dpi = 300)
 
 
 #######################
@@ -238,3 +264,14 @@ print(plot_arrow_growth_rate)
 
 ggsave("output/graph/arrow_plots_growth_rates.png", plot_arrow_growth_rate, width = 14, height = 12, dpi = 300)
 
+# prior checking
+# default prior : https://becarioprecario.bitbucket.io/inla-gitbook/ch-priors.html
+#residual default prior: 
+inla.models()$latent$iid$hyper$theta
+
+#fixed effect
+inla.models()
+names(inla.models()$prior)
+
+inla.models()$fixed
+inla.getOption("control.fixed")
