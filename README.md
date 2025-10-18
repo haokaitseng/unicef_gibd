@@ -16,5 +16,5 @@ Bayesian temporal models are fitted using the Integrated Nested Laplace Approxim
 - Unlike lagging expenditure data, budget data are typically available prior to programme implementation, making GIBD a valuable tool for early coverage outlooks
 
 ## Dissemination: 
-This project is set to be submitted to the [2025 Taiwan Public Health Joint Annual Conference](https://www.publichealth.org.tw/news_detail.asp?CateName=%E6%B4%BB%E5%8B%95%E8%88%87%E7%A0%94%E8%A8%8E%E6%9C%83&CateID=9&NewsID=1035) for oral presentation in the subject of Global Health, titled: 
+This project is presented on the [2025 Taiwan Public Health Joint Annual Conference](https://www.publichealth.org.tw/news_detail.asp?CateName=%E6%B4%BB%E5%8B%95%E8%88%87%E7%A0%94%E8%A8%8E%E6%9C%83&CateID=9&NewsID=1035) on 19th Oct 2025 for oral presentation in the subject of Global Health, titled: 
 > A Budget Impact Analysis on Immunisation Coverage: Evidence from UNICEF Global Immunization Budget Database in LMICs (2021–2025)
